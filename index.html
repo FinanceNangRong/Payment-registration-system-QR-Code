@@ -309,7 +309,7 @@
 
     <script>
         // --- ส่วนที่ 1: การตั้งค่า (Configuration) ---
-        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbydi5zHTz0XUceR65bpfU3j_uuLSRnhYE0nG_V88vJPTODdPMNnmOmfdZZM8AyCFpUu/exec"; 
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby1Yhqqf6P706tqKqGYpnoaIn-BoR66AELHiw7kcOPsXUlA_yj7C1IBNmsnYpcLfE6X/exec"; 
         
         // --- ส่วนที่ 2: ตัวแปรเก็บข้อมูล (State) ---
         let temporaryRecords = [];
@@ -797,8 +797,11 @@
                             ${amount.toLocaleString('en-US', {minimumFractionDigits: 2})}
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap text-center text-sm font-medium">
-                            <button onclick="openEditModal(${index})" class="text-blue-600 hover:text-blue-800 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-md transition-colors" title="แก้ไขข้อมูลนี้">
+                            <button onclick="openEditModal(${index})" class="text-blue-600 hover:text-blue-800 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-md transition-colors mr-2" title="แก้ไขข้อมูลนี้">
                                 <i class="fas fa-edit mr-1"></i> แก้ไข
+                            </button>
+                            <button onclick="deleteEditItem(${index})" class="text-red-600 hover:text-red-800 bg-red-100 hover:bg-red-200 px-3 py-1 rounded-md transition-colors" title="ลบข้อมูลนี้">
+                                <i class="fas fa-trash-alt mr-1"></i> ลบ
                             </button>
                         </td>
                     `;
@@ -909,6 +912,64 @@
             }
         }
 
+        // ฟังก์ชันยืนยันการลบข้อมูลที่ส่งแล้ว
+        function deleteEditItem(index) {
+            const item = editRecordsMap[index];
+            
+            if (!item.rowIdx) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยังไม่สามารถลบได้',
+                    text: 'กรุณานำโค้ดชุดใหม่ไปอัปเดตใน Apps Script ก่อนครับ',
+                    confirmButtonText: 'เข้าใจแล้ว'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'ยืนยันการลบข้อมูล?',
+                text: "ข้อมูลนี้จะถูกลบออกจากตารางถาวร และไม่สามารถกู้คืนได้!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#9ca3af',
+                confirmButtonText: '<i class="fas fa-trash-alt mr-1"></i> ใช่, ลบเลย!',
+                cancelButtonText: 'ยกเลิก'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await submitDeleteData(item.rowIdx);
+                }
+            });
+        }
+
+        // ฟังก์ชันส่งคำสั่งลบไปยัง Sheet
+        async function submitDeleteData(rowIdx) {
+            Swal.fire({ title: 'กำลังลบข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            
+            try {
+                const payload = {
+                    action: 'delete',
+                    rowIdx: rowIdx
+                };
+
+                await fetch(GOOGLE_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                Swal.fire('ลบสำเร็จ', 'ลบข้อมูลออกจาก Sheet เรียบร้อยแล้ว', 'success');
+                fetchEditData(); // โหลดตารางใหม่หลังลบเสร็จเพื่ออัปเดตเลขแถว
+            } catch(e) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถลบได้ กรุณาตรวจสอบอินเทอร์เน็ต', 'error');
+            }
+        }
+
     </script>
 </body>
 </html>
+
+
+
+
